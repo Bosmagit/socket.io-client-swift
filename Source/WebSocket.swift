@@ -198,7 +198,7 @@ public class WebSocket : NSObject, NSStreamDelegate {
         
         var port = url.port
         if port == nil {
-            if ["wss", "https"].contains(url.scheme) {
+            if ["wss", "https"].contains(url.scheme!) {
                 port = 443
             } else {
                 port = 80
@@ -211,7 +211,7 @@ public class WebSocket : NSObject, NSStreamDelegate {
         }
         addHeader(urlRequest, key: headerWSVersionName, val: headerWSVersionValue)
         addHeader(urlRequest, key: headerWSKeyName, val: generateWebSocketKey())
-        addHeader(urlRequest, key: headerOriginName, val: url.absoluteString)
+        addHeader(urlRequest, key: headerOriginName, val: url.absoluteString!)
         addHeader(urlRequest, key: headerWSHostName, val: "\(url.host!):\(port!)")
         for (key,value) in headers {
             addHeader(urlRequest, key: key, val: value)
@@ -251,7 +251,7 @@ public class WebSocket : NSObject, NSStreamDelegate {
         guard let inStream = inputStream, let outStream = outputStream else { return }
         inStream.delegate = self
         outStream.delegate = self
-        if ["wss", "https"].contains(url.scheme) {
+        if ["wss", "https"].contains(url.scheme!) {
             inStream.setProperty(NSStreamSocketSecurityLevelNegotiatedSSL, forKey: NSStreamSocketSecurityLevelKey)
             outStream.setProperty(NSStreamSocketSecurityLevelNegotiatedSSL, forKey: NSStreamSocketSecurityLevelKey)
         } else {
@@ -268,7 +268,7 @@ public class WebSocket : NSObject, NSStreamDelegate {
         }
         if let cipherSuites = self.enabledSSLCipherSuites {
             if let sslContextIn = CFReadStreamCopyProperty(inputStream, kCFStreamPropertySSLContext) as! SSLContextRef?,
-                sslContextOut = CFWriteStreamCopyProperty(outputStream, kCFStreamPropertySSLContext) as! SSLContextRef? {
+                let sslContextOut = CFWriteStreamCopyProperty(outputStream, kCFStreamPropertySSLContext) as! SSLContextRef? {
                     let resIn = SSLSetEnabledCiphers(sslContextIn, cipherSuites, cipherSuites.count)
                     let resOut = SSLSetEnabledCiphers(sslContextOut, cipherSuites, cipherSuites.count)
                     if resIn != errSecSuccess {
@@ -390,7 +390,7 @@ public class WebSocket : NSObject, NSStreamDelegate {
         var totalSize = 0
         for i in 0..<bufferLen {
             if buffer[i] == CRLFBytes[k] {
-                k++
+                k += 1
                 if k == 3 {
                     totalSize = i + 1
                     break
@@ -614,7 +614,7 @@ public class WebSocket : NSObject, NSStreamDelegate {
             }
             if let response = response {
                 response.bytesLeft -= Int(len)
-                response.frameCount++
+                response.frameCount += 1
                 response.isFin = isFin > 0 ? true : false
                 if isNew {
                     readStack.append(response)
@@ -898,15 +898,14 @@ private class SSLSecurity {
                 collect.append(SecCertificateCreateWithData(nil,cert)!)
             }
             SecTrustSetAnchorCertificates(trust,collect)
-            var result: SecTrustResultType = 0
+            var result: SecTrustResultType = .Invalid
             SecTrustEvaluate(trust,&result)
-            let r = Int(result)
-            if r == kSecTrustResultUnspecified || r == kSecTrustResultProceed {
+            if result == .Unspecified || result == .Proceed {
                 var trustedCount = 0
                 for serverCert in serverCerts {
                     for cert in certs {
                         if cert == serverCert {
-                            trustedCount++
+                            trustedCount += 1
                             break
                         }
                     }
@@ -918,7 +917,7 @@ private class SSLSecurity {
         }
         return false
     }
-    
+
     /**
      Get the public key from a certificate data
      
@@ -945,7 +944,7 @@ private class SSLSecurity {
         
         guard let trust = possibleTrust else { return nil }
         
-        var result: SecTrustResultType = 0
+        var result: SecTrustResultType = SecTrustResultType.Invalid
         SecTrustEvaluate(trust, &result)
         return SecTrustCopyPublicKey(trust)
     }
